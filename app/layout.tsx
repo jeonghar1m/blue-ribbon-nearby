@@ -19,7 +19,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <footer className="mt-auto py-6 text-center text-sm text-gray-500">
+          © {new Date().getFullYear()}{" "}
+          <a
+            href="https://jeongharim.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="no-underline hover:text-gray-700"
+          >
+            Jeong Harim
+          </a>
+        </footer>
+      </body>
     </html>
   );
 }
