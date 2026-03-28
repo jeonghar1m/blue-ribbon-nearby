@@ -32,6 +32,9 @@ export default function SearchSection() {
   const [lastZone, setLastZone] = useState<Zone | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const PAGE_SIZE = 10;
 
   const fetchRestaurantsByZone = useCallback(
     async (zone: Zone, dist: DistanceOption, ribbon: RibbonFilter) => {
@@ -52,6 +55,7 @@ export default function SearchSection() {
         setRestaurants(data.items ?? []);
         setSearchCenter({ lat: zone.zone2Lat, lng: zone.zone2Lng });
         setSearched(true);
+        setCurrentPage(1);
       } catch {
         setError("레스토랑 검색에 실패했습니다. 다시 시도해 주세요.");
         setRestaurants([]);
@@ -84,6 +88,7 @@ export default function SearchSection() {
         setRestaurants(data.items ?? []);
         setSearchCenter({ lat, lng });
         setSearched(true);
+        setCurrentPage(1);
       } catch {
         setError("레스토랑 검색에 실패했습니다. 다시 시도해 주세요.");
         setRestaurants([]);
@@ -220,6 +225,32 @@ export default function SearchSection() {
         return da - db;
       })
     : filteredRestaurants;
+
+  const totalPages = Math.ceil(sortedRestaurants.length / PAGE_SIZE);
+  const pagedRestaurants = sortedRestaurants.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  const getPageItems = (): (number | "...")[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const delta = 2;
+    const left = currentPage - delta;
+    const right = currentPage + delta;
+    const items: (number | "...")[] = [];
+
+    items.push(1);
+    if (left > 2) items.push("...");
+    for (let i = Math.max(2, left); i <= Math.min(totalPages - 1, right); i++) {
+      items.push(i);
+    }
+    if (right < totalPages - 1) items.push("...");
+    items.push(totalPages);
+
+    return items;
+  };
 
   return (
     <div className="w-full">
@@ -400,7 +431,7 @@ export default function SearchSection() {
               <span className="text-primary">{sortedRestaurants.length}</span>곳
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
-              {sortedRestaurants.map((r) => (
+              {pagedRestaurants.map((r) => (
                 <RestaurantCard
                   key={r.id}
                   restaurant={r}
@@ -417,6 +448,49 @@ export default function SearchSection() {
                 />
               ))}
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="whitespace-nowrap rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
+                >
+                  이전
+                </button>
+                {getPageItems().map((item, i) =>
+                  item === "..." ? (
+                    <span
+                      key={`ellipsis-${i}`}
+                      className="px-1 py-2 text-sm text-zinc-400"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => setCurrentPage(item)}
+                      className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors ${
+                        item === currentPage
+                          ? "bg-primary text-white"
+                          : "border border-zinc-300 bg-white text-zinc-700 hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ),
+                )}
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="whitespace-nowrap rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
