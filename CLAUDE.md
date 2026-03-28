@@ -161,6 +161,28 @@ When working on this project, read these files in order:
 4. `app/api/restaurants/route.ts` - Core search logic
 5. `app/_lib/scraper.ts` - HTML parsing pattern (if modifying detail fields)
 
+## Commit Message Convention
+
+Use the following prefixes in commit messages to categorize changes:
+
+| Prefix | Usage | Example |
+|--------|-------|---------|
+| `feat:` | New feature | `feat: add restaurant detail page` |
+| `fix:` | Bug fix | `fix: correct haversine distance calculation` |
+| `refactor:` | Code refactoring (no feature/fix) | `refactor: extract scraper utilities` |
+| `style:` | Styling changes (CSS, Tailwind) | `style: update ribbon badge colors` |
+| `docs:` | Documentation updates | `docs: update API endpoint examples` |
+| `chore:` | Maintenance, deps, config | `chore: update Next.js to 16.2.1` |
+| `test:` | Add/update tests | `test: add restaurant search tests` |
+| `perf:` | Performance improvements | `perf: optimize HTML parsing regex` |
+
+**Format**: `<prefix>: <short description>`
+
+Always end with:
+```
+Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
+```
+
 ## Common Pitfalls
 
 1. **Forgetting `await params`**: Dynamic route params are Promises in Next.js 16
