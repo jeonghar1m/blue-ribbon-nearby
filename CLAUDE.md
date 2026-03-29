@@ -178,6 +178,10 @@ Use the following prefixes in commit messages to categorize changes:
 
 **Format**: `<prefix>: <short description>`
 
+Always set the commit author to:
+- **Name**: `Jeong Harim`
+- **Email**: `me@jeongharim.dev`
+
 Always end with:
 ```
 Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
