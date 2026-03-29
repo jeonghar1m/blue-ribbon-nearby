@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type {
   Zone,
   Restaurant,
@@ -11,30 +11,102 @@ import { DISTANCE_OPTIONS, RIBBON_OPTIONS } from "@/app/_lib/constants";
 import { haversineDistance } from "@/app/_lib/geo";
 import RestaurantCard from "./RestaurantCard";
 
+const SESSION_KEY = "brn_search_state";
+
+interface SavedState {
+  query: string;
+  restaurants: Restaurant[];
+  ribbonFilter: RibbonFilter;
+  distance: DistanceOption;
+  gpsCoords: { lat: number; lng: number } | null;
+  searchCenter: { lat: number; lng: number } | null;
+  searchMode: "zone" | "gps" | null;
+  lastZone: Zone | null;
+  searched: boolean;
+  currentPage: number;
+}
+
+function loadSavedState(): SavedState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (raw) return JSON.parse(raw) as SavedState;
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 export default function SearchSection() {
-  const [query, setQuery] = useState("");
+  const saved = useRef(loadSavedState());
+
+  const [query, setQuery] = useState(saved.current?.query ?? "");
   const [zones, setZones] = useState<Zone[]>([]);
   const [showZoneList, setShowZoneList] = useState(false);
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>(
+    saved.current?.restaurants ?? [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ribbonFilter, setRibbonFilter] = useState<RibbonFilter>("ALL");
-  const [distance, setDistance] = useState<DistanceOption>(1000);
+  const [ribbonFilter, setRibbonFilter] = useState<RibbonFilter>(
+    saved.current?.ribbonFilter ?? "ALL",
+  );
+  const [distance, setDistance] = useState<DistanceOption>(
+    saved.current?.distance ?? 1000,
+  );
   const [gpsCoords, setGpsCoords] = useState<{
     lat: number;
     lng: number;
-  } | null>(null);
+  } | null>(saved.current?.gpsCoords ?? null);
   const [searchCenter, setSearchCenter] = useState<{
     lat: number;
     lng: number;
-  } | null>(null);
-  const [searchMode, setSearchMode] = useState<"zone" | "gps" | null>(null);
-  const [lastZone, setLastZone] = useState<Zone | null>(null);
+  } | null>(saved.current?.searchCenter ?? null);
+  const [searchMode, setSearchMode] = useState<"zone" | "gps" | null>(
+    saved.current?.searchMode ?? null,
+  );
+  const [lastZone, setLastZone] = useState<Zone | null>(
+    saved.current?.lastZone ?? null,
+  );
   const [gpsLoading, setGpsLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searched, setSearched] = useState(saved.current?.searched ?? false);
+  const [currentPage, setCurrentPage] = useState(
+    saved.current?.currentPage ?? 1,
+  );
 
   const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    if (!searched) return;
+    try {
+      const state: SavedState = {
+        query,
+        restaurants,
+        ribbonFilter,
+        distance,
+        gpsCoords,
+        searchCenter,
+        searchMode,
+        lastZone,
+        searched,
+        currentPage,
+      };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
+    } catch {
+      // ignore
+    }
+  }, [
+    query,
+    restaurants,
+    ribbonFilter,
+    distance,
+    gpsCoords,
+    searchCenter,
+    searchMode,
+    lastZone,
+    searched,
+    currentPage,
+  ]);
 
   const fetchRestaurantsByZone = useCallback(
     async (zone: Zone, dist: DistanceOption, ribbon: RibbonFilter) => {
