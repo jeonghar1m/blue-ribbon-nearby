@@ -1,4 +1,4 @@
-import type { DistanceOption, RibbonFilter } from "./types";
+import type { CategoryFilter, DistanceOption, RibbonFilter } from "./types";
 
 export const BLUERIBBON_BASE_URL = "https://www.bluer.co.kr";
 
@@ -22,4 +22,15 @@ export const RIBBON_OPTIONS: { value: RibbonFilter; label: string }[] = [
   { value: "RIBBON_THREE", label: "3리본" },
   { value: "RIBBON_TWO", label: "2리본" },
   { value: "RIBBON_ONE", label: "1리본" },
+];
+
+export const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
+  { value: "ALL", label: "전체" },
+  { value: "한식", label: "한식" },
+  { value: "일식", label: "일식" },
+  { value: "중식", label: "중식" },
+  { value: "양식", label: "양식" },
+  { value: "아시안", label: "아시안" },
+  { value: "카페/디저트", label: "카페/디저트" },
+  { value: "기타", label: "기타" },
 ];
