@@ -22,7 +22,7 @@ interface SavedState {
   query: string;
   restaurants: Restaurant[];
   ribbonFilter: RibbonFilter;
-  categoryFilter: CategoryFilter;
+  categoryFilters: CategoryFilter[];
   distance: DistanceOption;
   gpsCoords: { lat: number; lng: number } | null;
   searchCenter: { lat: number; lng: number } | null;
@@ -61,8 +61,8 @@ export default function SearchSection() {
   const [ribbonFilter, setRibbonFilter] = useState<RibbonFilter>(
     saved.current?.ribbonFilter ?? "ALL",
   );
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(
-    saved.current?.categoryFilter ?? "ALL",
+  const [categoryFilters, setCategoryFilters] = useState<CategoryFilter[]>(
+    saved.current?.categoryFilters ?? ["ALL"],
   );
   const [distance, setDistance] = useState<DistanceOption>(
     saved.current?.distance ?? 1000,
@@ -96,7 +96,7 @@ export default function SearchSection() {
         query,
         restaurants,
         ribbonFilter,
-        categoryFilter,
+        categoryFilters,
         distance,
         gpsCoords,
         searchCenter,
@@ -113,7 +113,7 @@ export default function SearchSection() {
     query,
     restaurants,
     ribbonFilter,
-    categoryFilter,
+    categoryFilters,
     distance,
     gpsCoords,
     searchCenter,
@@ -143,7 +143,7 @@ export default function SearchSection() {
         setSearchCenter({ lat: zone.zone2Lat, lng: zone.zone2Lng });
         setSearched(true);
         setCurrentPage(1);
-        setCategoryFilter("ALL");
+        setCategoryFilters(["ALL"]);
       } catch {
         setError("레스토랑 검색에 실패했습니다. 다시 시도해 주세요.");
         setRestaurants([]);
@@ -177,7 +177,7 @@ export default function SearchSection() {
         setSearchCenter({ lat, lng });
         setSearched(true);
         setCurrentPage(1);
-        setCategoryFilter("ALL");
+        setCategoryFilters(["ALL"]);
       } catch {
         setError("레스토랑 검색에 실패했습니다. 다시 시도해 주세요.");
         setRestaurants([]);
@@ -293,20 +293,30 @@ export default function SearchSection() {
     }
   };
 
-  const handleCategoryChange = (newCategory: CategoryFilter) => {
-    setCategoryFilter(newCategory);
+  const handleCategoryChange = (clicked: CategoryFilter) => {
+    setCategoryFilters((prev) => {
+      if (clicked === "ALL") return ["ALL"];
+      const without = prev.filter((v) => v !== "ALL" && v !== clicked);
+      const isAlreadySelected = prev.includes(clicked);
+      if (isAlreadySelected) {
+        return without.length === 0 ? ["ALL"] : without;
+      }
+      return [...without, clicked];
+    });
     setCurrentPage(1);
   };
 
   const filteredRestaurants = restaurants.filter((r) => {
     if (r.ribbonType === "NEW") return false;
-    if (categoryFilter === "ALL") return true;
-    if (categoryFilter === "기타") {
-      return !NAMED_CATEGORIES.some((cat) =>
-        r.foodTypes.some((ft) => ft.includes(cat)),
-      );
-    }
-    return r.foodTypes.some((ft) => ft.includes(categoryFilter));
+    if (categoryFilters.includes("ALL")) return true;
+    return categoryFilters.some((cat) => {
+      if (cat === "기타") {
+        return !NAMED_CATEGORIES.some((nc) =>
+          r.foodTypes.some((ft) => ft.includes(nc)),
+        );
+      }
+      return r.foodTypes.some((ft) => ft.includes(cat));
+    });
   });
 
   const sortedRestaurants = searchCenter
@@ -456,34 +466,20 @@ export default function SearchSection() {
 
       {/* Filters */}
       {searched && (
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-6 flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-4">
           {/* Category Filter */}
-          <div className="flex flex-wrap gap-1.5">
-            {CATEGORY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => handleCategoryChange(opt.value)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                  categoryFilter === opt.value
-                    ? "bg-primary text-white"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Ribbon + Distance Filter */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {/* Ribbon Filter */}
-            <div className="flex gap-1.5">
-              {RIBBON_OPTIONS.map((opt) => (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              카테고리
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {CATEGORY_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => handleRibbonChange(opt.value)}
+                  onClick={() => handleCategoryChange(opt.value)}
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                    ribbonFilter === opt.value
+                    (opt.value === "ALL" && categoryFilters.includes("ALL")) ||
+                    (opt.value !== "ALL" && categoryFilters.includes(opt.value))
                       ? "bg-primary text-white"
                       : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
                   }`}
@@ -492,22 +488,54 @@ export default function SearchSection() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="border-t border-zinc-100" />
+
+          {/* Ribbon + Distance Filter */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
+            {/* Ribbon Filter */}
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                리본 등급
+              </p>
+              <div className="flex gap-1.5">
+                {RIBBON_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleRibbonChange(opt.value)}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                      ribbonFilter === opt.value
+                        ? "bg-primary text-white"
+                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Distance Filter */}
-            <div className="flex gap-1.5">
-              {DISTANCE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => handleDistanceChange(opt.value)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    distance === opt.value
-                      ? "bg-primary text-white"
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                검색 범위
+              </p>
+              <div className="flex gap-1.5">
+                {DISTANCE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleDistanceChange(opt.value)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      distance === opt.value
+                        ? "bg-primary text-white"
+                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -540,7 +568,7 @@ export default function SearchSection() {
           <div className="rounded-xl border border-zinc-200 bg-white py-12 text-center">
             <p className="text-zinc-500">검색 결과가 없습니다</p>
             <p className="mt-1 text-sm text-zinc-400">
-              {categoryFilter !== "ALL"
+              {!categoryFilters.includes("ALL")
                 ? "카테고리 필터를 변경하거나 검색 범위를 넓혀보세요"
                 : "검색 범위를 넓히거나 다른 지역을 검색해 보세요"}
             </p>
