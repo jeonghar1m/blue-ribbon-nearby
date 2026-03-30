@@ -45,3 +45,12 @@ export interface RestaurantDetail {
 
 export type RibbonFilter = "ALL" | "RIBBON_THREE" | "RIBBON_TWO" | "RIBBON_ONE";
 export type DistanceOption = 500 | 1000 | 2000 | 5000;
+export type CategoryFilter =
+  | "ALL"
+  | "한식"
+  | "일식"
+  | "중식"
+  | "양식"
+  | "아시안"
+  | "카페/디저트"
+  | "기타";
