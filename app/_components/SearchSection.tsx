@@ -27,6 +27,7 @@ interface SavedState {
   gpsCoords: { lat: number; lng: number } | null;
   searchCenter: { lat: number; lng: number } | null;
   searchMode: "zone" | "gps" | null;
+  inputMode: "zone" | "name";
   lastZone: Zone | null;
   searched: boolean;
   currentPage: number;
@@ -78,6 +79,9 @@ export default function SearchSection() {
   const [searchMode, setSearchMode] = useState<"zone" | "gps" | null>(
     saved.current?.searchMode ?? null,
   );
+  const [inputMode, setInputMode] = useState<"zone" | "name">(
+    saved.current?.inputMode ?? "zone",
+  );
   const [lastZone, setLastZone] = useState<Zone | null>(
     saved.current?.lastZone ?? null,
   );
@@ -101,6 +105,7 @@ export default function SearchSection() {
         gpsCoords,
         searchCenter,
         searchMode,
+        inputMode,
         lastZone,
         searched,
         currentPage,
@@ -118,6 +123,7 @@ export default function SearchSection() {
     gpsCoords,
     searchCenter,
     searchMode,
+    inputMode,
     lastZone,
     searched,
     currentPage,
@@ -188,9 +194,45 @@ export default function SearchSection() {
     [],
   );
 
+  const fetchRestaurantsByName = useCallback(
+    async (name: string, ribbon: RibbonFilter) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({
+          query: name,
+          ...(ribbon !== "ALL" && { ribbonType: ribbon }),
+        });
+        const res = await fetch(`/api/restaurants/name-search?${params}`);
+        if (!res.ok) throw new Error("검색에 실패했습니다");
+        const data = await res.json();
+        const items = data.items ?? [];
+        setRestaurants(items);
+        setSearchCenter(null);
+        setSearched(true);
+        setCurrentPage(1);
+        setCategoryFilters(["ALL"]);
+        if (items.length === 0) {
+          setError("검색 결과가 없습니다. 다른 식당명을 입력해 주세요.");
+        }
+      } catch {
+        setError("레스토랑 검색에 실패했습니다. 다시 시도해 주세요.");
+        setRestaurants([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
+
+    if (inputMode === "name") {
+      await fetchRestaurantsByName(query.trim(), ribbonFilter);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -365,6 +407,32 @@ export default function SearchSection() {
 
   return (
     <div className="w-full">
+      {/* Search Mode Tabs */}
+      <div className="mb-3 flex rounded-xl border border-zinc-200 bg-zinc-100 p-1">
+        <button
+          type="button"
+          onClick={() => { setInputMode("zone"); setQuery(""); setShowZoneList(false); }}
+          className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+            inputMode === "zone"
+              ? "bg-white text-zinc-800 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-700"
+          }`}
+        >
+          지역 검색
+        </button>
+        <button
+          type="button"
+          onClick={() => { setInputMode("name"); setQuery(""); setShowZoneList(false); }}
+          className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+            inputMode === "name"
+              ? "bg-white text-zinc-800 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-700"
+          }`}
+        >
+          식당명 검색
+        </button>
+      </div>
+
       {/* Search Bar */}
       <form onSubmit={handleSearch} className="relative">
         <div className="flex gap-2">
@@ -385,7 +453,11 @@ export default function SearchSection() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="지역명으로 검색 (예: 강남역, 광화문)"
+              placeholder={
+                inputMode === "name"
+                  ? "식당명으로 검색 (예: 스시야마, 진진)"
+                  : "지역명으로 검색 (예: 강남역, 광화문)"
+              }
               className="w-full rounded-xl border border-zinc-300 bg-white py-3.5 pl-11 pr-4 text-base outline-none transition-colors placeholder:text-zinc-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </div>
@@ -400,7 +472,7 @@ export default function SearchSection() {
       </form>
 
       {/* GPS Button */}
-      <button
+      {inputMode === "zone" && <button
         onClick={handleGps}
         disabled={gpsLoading}
         className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white py-3 text-sm font-medium text-zinc-700 transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
@@ -441,7 +513,7 @@ export default function SearchSection() {
           </svg>
         )}
         {gpsLoading ? "위치 확인 중..." : "현재 위치로 찾기"}
-      </button>
+      </button>}
 
       {/* Zone Selection List */}
       {showZoneList && zones.length > 0 && (
@@ -516,27 +588,29 @@ export default function SearchSection() {
               </div>
             </div>
 
-            {/* Distance Filter */}
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                검색 범위
-              </p>
-              <div className="flex gap-1.5">
-                {DISTANCE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleDistanceChange(opt.value)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      distance === opt.value
-                        ? "bg-primary text-white"
-                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+            {/* Distance Filter — zone/gps only */}
+            {searchMode !== null && (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                  검색 범위
+                </p>
+                <div className="flex gap-1.5">
+                  {DISTANCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleDistanceChange(opt.value)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        distance === opt.value
+                          ? "bg-primary text-white"
+                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -578,7 +652,7 @@ export default function SearchSection() {
         {!loading && !error && sortedRestaurants.length > 0 && (
           <>
             <p className="mb-4 text-sm font-medium text-zinc-600">
-              근처 맛집{" "}
+              {inputMode === "name" ? "검색된 맛집" : "근처 맛집"}{" "}
               <span className="text-primary">{sortedRestaurants.length}</span>곳
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
