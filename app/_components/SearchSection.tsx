@@ -13,6 +13,7 @@ import {
   RIBBON_OPTIONS,
   CATEGORY_OPTIONS,
 } from "@/app/_lib/constants";
+import { useIsMobile } from "@/app/_hooks/useIsMobile";
 import { haversineDistance } from "@/app/_lib/geo";
 import RestaurantCard from "./RestaurantCard";
 
@@ -87,6 +88,7 @@ export default function SearchSection() {
     saved.current?.currentPage ?? 1,
   );
 
+  const isMobile = useIsMobile();
   const PAGE_SIZE = 10;
 
   useEffect(() => {
@@ -343,11 +345,11 @@ export default function SearchSection() {
     currentPage * PAGE_SIZE,
   );
 
-  const getPageItems = (): (number | "...")[] => {
-    if (totalPages <= 7) {
+  const getPageItems = (delta = 1): (number | "...")[] => {
+    const threshold = delta === 0 ? 5 : 7;
+    if (totalPages <= threshold) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
-    const delta = 1;
     const left = currentPage - delta;
     const right = currentPage + delta;
     const items: (number | "...")[] = [];
@@ -601,7 +603,7 @@ export default function SearchSection() {
             </div>
 
             {totalPages > 1 && (
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <div className="mt-6 flex items-center justify-center gap-2">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
@@ -609,7 +611,7 @@ export default function SearchSection() {
                 >
                   이전
                 </button>
-                {getPageItems().map((item, i) =>
+                {getPageItems(isMobile ? 0 : 1).map((item, i) =>
                   item === "..." ? (
                     <span
                       key={`ellipsis-${i}`}
