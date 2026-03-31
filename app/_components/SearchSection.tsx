@@ -611,7 +611,7 @@ export default function SearchSection() {
                 >
                   이전
                 </button>
-                {getPageItems(isMobile ? 0 : 1).map((item, i) =>
+                {getPageItems(isMobile ? 1 : 2).map((item, i) =>
                   item === "..." ? (
                     <span
                       key={`ellipsis-${i}`}
