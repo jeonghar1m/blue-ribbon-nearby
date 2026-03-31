@@ -347,7 +347,7 @@ export default function SearchSection() {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
-    const delta = 2;
+    const delta = 1;
     const left = currentPage - delta;
     const right = currentPage + delta;
     const items: (number | "...")[] = [];
@@ -601,7 +601,7 @@ export default function SearchSection() {
             </div>
 
             {totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-center gap-2">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
